@@ -532,3 +532,215 @@ class GradientDescentToClosedForm(Scene):
 
         self.play(FadeIn(cf_group), Create(cf_box))
         self.wait(2)
+from manim import *
+
+class StepByStepLearningWithDataset(Scene):
+    def construct(self):
+        # --- Title ---
+        title = Text("Error Reduction", font_size=20).to_edge(UP)
+        self.play(Write(title))
+
+        # --- Dataset Table ---
+        headers = ["Hours (x)", "Marks (y)"]
+        values = [(1, 30), (2, 40), (3, 50), (4, 60), (5, 72), (6, 85)]
+
+        table = Table(
+            [headers] + [[str(x), str(y)] for x, y in values],
+            line_config={"stroke_width": 1},
+            element_to_mobject=Text,
+            h_buff=1.1
+        ).scale(0.25).to_corner(UL, buff=0.6)
+
+        self.play(Create(table))
+        self.wait(0.5)
+
+        # --- Axes + Points at Center ---
+        axes = Axes(
+            x_range=[0, 7, 1], y_range=[0, 90, 10],
+            x_length=6.5, y_length=4.5,
+            axis_config={"color": GREY},
+            tips=False
+        ).move_to(DOWN * 0.5)
+
+        points = VGroup(*[Dot(axes.c2p(x, y), color=YELLOW) for x, y in values])
+
+        self.play(Create(axes), LaggedStartMap(FadeIn, points, lag_ratio=0.2))
+        self.wait(0.5)
+
+        # --- Step-by-Step Lines ---
+        step_titles = ["Initial Guess", "Improved Guess", "Best Fit"]
+        slopes_intercepts = [(3, 10), (4.5, 12), (5, 10)]
+        colors = [RED, ORANGE, GREEN]  # For error lines
+
+        eq_groups = VGroup()
+        current_line = None
+        current_label = None
+        current_errors = None
+
+        for i, (m, b) in enumerate(slopes_intercepts):
+            # --- Plot line and equation label ---
+            line = axes.plot(lambda x: m * x + b, color=colors[i])
+            label = MathTex(f"y = {m}x + {b}", font_size=24, color=colors[i])
+            label.next_to(line, UP)
+
+            # --- Error lines from points to prediction ---
+            errors = VGroup(*[
+                DashedLine(
+                    start=axes.c2p(x, y),
+                    end=axes.c2p(x, m * x + b),
+                    color=colors[i]
+                ) for x, y in values
+            ])
+
+            # --- Right side text for step ---
+            step_text = Text(step_titles[i], font_size=24, color=colors[i])
+            math_eq = MathTex(f"y = {m}x + {b}", font_size=26, color=colors[i])
+            side_group = VGroup(step_text, math_eq).arrange(DOWN, aligned_edge=LEFT, buff=0.2)
+            side_group.to_edge(RIGHT, buff=1).shift(DOWN * i * 1.2)
+            eq_groups.add(side_group)
+
+            # --- Animate each step ---
+            if i == 0:
+                self.play(Create(line), Write(label))
+                self.play(Create(errors))
+                self.play(FadeIn(side_group))
+                current_line = line
+                current_label = label
+                current_errors = errors
+            else:
+                self.play(Transform(current_line, line), Transform(current_label, label))
+                self.play(Transform(current_errors, errors))
+                self.play(FadeIn(side_group))
+            self.wait(0.8)
+
+        self.wait(2)
+
+from manim import *
+
+class BiasVarianceVisualDemo(Scene):
+    def construct(self):
+        self.show_title("🎯 Bias, Variance, Underfitting & Overfitting")
+        self.wait(1)
+        self.bias_section()
+        self.wait(1)
+        self.variance_section()
+        self.wait(1)
+        self.underfitting_section()
+        self.wait(1)
+        self.overfitting_section()
+        self.wait(1)
+        self.best_model_section()
+        self.wait(2)
+
+    def show_title(self, text):
+        title = Text(text, font_size=34,color=RED).to_edge(UP)
+        self.play(Write(title))
+
+    def clear_screen(self):
+        self.play(*[FadeOut(mob) for mob in self.mobjects])
+
+    def bias_section(self):
+        self.clear_screen()
+        heading = Text("📌 Bias – Wrong Thinking", font_size=30, color=RED).to_edge(UP)
+        line_explain = Text("Assumes same output for all inputs", font_size=24).next_to(heading, DOWN)
+
+        character = SVGMobject("study.svg").scale(2).to_edge(LEFT)
+        thought = Text("Everyone scores 50!", font_size=24).next_to(character, RIGHT).shift(RIGHT * 0.5)
+
+        axes = Axes(x_range=[0, 7], y_range=[0, 100, 20], x_length=5, y_length=3.2, tips=False)
+        axes.to_edge(RIGHT * 1.2)
+        line = axes.plot(lambda x: 50, color=RED)
+        eq = MathTex("y = 50", font_size=26).next_to(line, UP)
+
+        eg = Text("💼 Predict all salaries as ₹50k", font_size=24).to_edge(DOWN)
+
+        self.play(FadeIn(heading), FadeIn(line_explain))
+        self.play(FadeIn(character), Write(thought))
+        self.play(Create(axes), Create(line), Write(eq))
+        self.play(FadeIn(eg))
+        self.wait(1)
+
+    def variance_section(self):
+        self.clear_screen()
+        heading = Text("📌 Variance – Overthinking", font_size=30, color=BLUE).to_edge(UP)
+        explain = Text("Fits too closely to training data", font_size=24).next_to(heading, DOWN)
+
+        character = SVGMobject("think.svg").scale(2).to_edge(LEFT)
+        thought = Text("Every point needs a new rule!", font_size=22).next_to(character, RIGHT).shift(RIGHT * 0.5)
+
+        axes = Axes(x_range=[0, 7], y_range=[0, 120, 20], x_length=5, y_length=3.2, tips=False)
+        axes.to_edge(RIGHT * 1.2)
+        dots = VGroup(*[Dot(axes.c2p(x, 10 * x + (x % 2) * 15), color=YELLOW) for x in range(1, 7)])
+        curve = axes.plot(lambda x: 10 * x + (x % 2) * 15, color=BLUE)
+
+        eg = Text("📱 Trying to cover all data points at once", font_size=24).to_edge(DOWN)
+
+        self.play(FadeIn(heading), FadeIn(explain))
+        self.play(FadeIn(character), Write(thought))
+        self.play(Create(axes), FadeIn(dots), Create(curve))
+        self.play(FadeIn(eg))
+        self.wait(1)
+
+    def underfitting_section(self):
+        self.clear_screen()
+        heading = Text("📉 Underfitting = Too Dumb", font_size=30, color=GREY).to_edge(UP)
+        explain = Text("Model too simple to learn", font_size=24).next_to(heading, DOWN)
+
+        character = SVGMobject("think.svg").scale(2).to_edge(LEFT )
+        thought = Text("I’ll just guess 10 for everyone!", font_size=22).next_to(character, RIGHT).shift(RIGHT * 0.5)
+
+        axes = Axes(x_range=[0, 7], y_range=[0, 100, 20], x_length=5, y_length=3.2, tips=False)
+        axes.to_edge(RIGHT * 1.2)
+        line = axes.plot(lambda x: 10, color=GREY)
+        eq = MathTex("y = 10", font_size=26).next_to(line, UP)
+
+        eg = Text("😅 Student who didn't study at all", font_size=24).to_edge(DOWN)
+
+        self.play(FadeIn(heading), FadeIn(explain))
+        self.play(FadeIn(character), Write(thought))
+        self.play(Create(axes), Create(line), Write(eq))
+        self.play(FadeIn(eg))
+        self.wait(1)
+
+    def overfitting_section(self):
+        self.clear_screen()
+        heading = Text("📈 Overfitting = Too Smart", font_size=30, color=ORANGE).to_edge(UP)
+        explain = Text("Memorizes data but fails on new data", font_size=24).next_to(heading, DOWN)
+
+        character = SVGMobject("think.svg").scale(2).to_edge(LEFT)
+        thought = Text("I’ll write 10 rules for 5 points!", font_size=22).next_to(character, RIGHT).shift(RIGHT * 0.5)
+
+        axes = Axes(x_range=[0, 7], y_range=[0, 120, 20], x_length=5, y_length=3.2, tips=False)
+        axes.to_edge(RIGHT * 1.2)
+        dots = VGroup(*[Dot(axes.c2p(x, 10 * x + (x % 2) * 15), color=YELLOW) for x in range(1, 7)])
+        curve = axes.plot(lambda x: 10 * x + (x % 2) * 15, color=ORANGE)
+
+        eg = Text("🧠 Student memorizing random trends", font_size=24).to_edge(DOWN)
+
+        self.play(FadeIn(heading), FadeIn(explain))
+        self.play(FadeIn(character), Write(thought))
+        self.play(Create(axes), FadeIn(dots), Create(curve))
+        self.play(FadeIn(eg))
+        self.wait(1)
+
+    def best_model_section(self):
+        self.clear_screen()
+        heading = Text("✅ Best Model = Balanced Thinking", font_size=30, color=GREEN).to_edge(UP)
+        explain = Text("Understands trends, generalizes well", font_size=24).next_to(heading, DOWN)
+
+        character = SVGMobject("study.svg").scale(2).to_edge(LEFT)
+        thought = Text("I get the pattern!", font_size=24).next_to(character, RIGHT).shift(RIGHT * 0.5)
+
+        axes = Axes(x_range=[0, 7], y_range=[0, 100, 20], x_length=5.5, y_length=3.5, tips=False)
+        axes.to_edge(RIGHT * 1.2)
+        dots = VGroup(*[Dot(axes.c2p(x, 10 * x + 5), color=YELLOW) for x in range(1, 7)])
+        line = axes.plot(lambda x: 10 * x + 5, color=GREEN)
+        eq = MathTex("y = 10x + 5", font_size=26).next_to(line, UP)
+
+        eg = Text("🎓 Student who understands concepts", font_size=24).to_edge(DOWN)
+
+        self.play(FadeIn(heading), FadeIn(explain))
+        self.play(FadeIn(character), Write(thought))
+        self.play(Create(axes), FadeIn(dots), Create(line), Write(eq))
+        self.play(FadeIn(eg))
+        self.wait(1)
